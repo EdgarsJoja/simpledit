@@ -1,27 +1,29 @@
 package main
 
 import (
-	"bytes"
-	"simpledit/buffer"
-	"simpledit/screen"
+	"log"
+	"simpledit/editor"
 	"slices"
 
 	"github.com/gdamore/tcell/v2"
 )
 
 func main() {
-	buffer := buffer.ReadFile("test.txt")
-	tScreen := screen.InitScreen()
+	editor, err := editor.NewEditor()
 
-	bufferRows := bytes.Split(buffer, []byte{'\n'})
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	editor.ReadFileIntoBuffer("test.txt")
+	bufferRows := editor.GetBufferRows()
 
 	cursorCol, cursorRow := 0, 0
 
 	for {
-		screen.DrawBuffer(tScreen, bufferRows)
-		tScreen.Show()
+		editor.Render()
 
-		event := tScreen.PollEvent()
+		event := editor.GetScreen().PollEvent()
 
 		switch event := event.(type) {
 		case *tcell.EventKey:
@@ -31,7 +33,7 @@ func main() {
 			if event.Key() == tcell.KeyRight {
 				cursorCol++
 
-				if cursorCol > len(bufferRows[cursorRow]) && cursorRow < len(bufferRows) {
+				if cursorCol > len(editor.GetBufferRows()[cursorRow]) && cursorRow < len(editor.GetBufferRows()) {
 					cursorRow++
 					cursorCol = 0
 				}
@@ -44,7 +46,7 @@ func main() {
 				if cursorCol < 0 {
 					if cursorRow > 0 {
 						cursorRow--
-						cursorCol = len(bufferRows[cursorRow])
+						cursorCol = len(editor.GetBufferRows()[cursorRow])
 					} else {
 						cursorCol = 0
 					}
@@ -76,7 +78,7 @@ func main() {
 			}
 
 			char := event.Rune()
-			bufferRows[cursorRow] = slices.Insert(bufferRows[cursorRow], cursorCol, byte(char))
+			editor.GetBufferRows()[cursorRow] = slices.Insert(editor.GetBufferRows()[cursorRow], cursorCol, byte(char))
 			cursorCol++
 		}
 
@@ -85,18 +87,18 @@ func main() {
 			cursorRow = 0
 		}
 
-		if cursorRow >= len(bufferRows) {
-			cursorRow = len(bufferRows) - 1
+		if cursorRow >= len(editor.GetBufferRows()) {
+			cursorRow = len(editor.GetBufferRows()) - 1
 		}
 
 		if cursorCol < 0 {
 			cursorCol = 0
 		}
 
-		if cursorCol > len(bufferRows[cursorRow]) {
-			cursorCol = max(len(bufferRows[cursorRow])-1, 0)
+		if cursorCol > len(editor.GetBufferRows()[cursorRow]) {
+			cursorCol = max(len(editor.GetBufferRows()[cursorRow])-1, 0)
 		}
 
-		tScreen.ShowCursor(cursorCol, cursorRow)
+		editor.GetScreen().ShowCursor(cursorCol, cursorRow)
 	}
 }

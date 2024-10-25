@@ -1,38 +1,48 @@
 package screen
 
 import (
-	"log"
-
 	"github.com/gdamore/tcell/v2"
 )
 
-func InitScreen() tcell.Screen {
-	screen, err := tcell.NewScreen()
+type EditorScreen struct {
+	screen tcell.Screen
+}
+
+func InitEditorScreen() (*EditorScreen, error) {
+	tScreen, err := tcell.NewScreen()
 
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
 
-	if err := screen.Init(); err != nil {
-		log.Fatalln(err)
+	if err := tScreen.Init(); err != nil {
+		return nil, err
 	}
 
 	defStyle := tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorReset)
-	screen.SetStyle(defStyle)
+	tScreen.SetStyle(defStyle)
 
-	screen.Clear()
+	tScreen.Clear()
 
-	return screen
+	editorScreen := EditorScreen{
+		screen: tScreen,
+	}
+
+	return &editorScreen, nil
 }
 
-func DrawBuffer(tScreen tcell.Screen, buffer [][]byte) {
-	for row, bufferRow := range buffer {
+func (editorScreen *EditorScreen) GetScreen() tcell.Screen {
+	return editorScreen.screen
+}
+
+func (editorScreen *EditorScreen) DefaultStyle() tcell.Style {
+	return tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorReset)
+}
+
+func (editorScreen *EditorScreen) DrawBufferRows(bufferRows [][]byte) {
+	for row, bufferRow := range bufferRows {
 		for col, char := range bufferRow {
-			tScreen.SetContent(col, row, rune(char), nil, DefaultStyle())
+			editorScreen.screen.SetContent(col, row, rune(char), nil, editorScreen.DefaultStyle())
 		}
 	}
-}
-
-func DefaultStyle() tcell.Style {
-	return tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorReset)
 }
