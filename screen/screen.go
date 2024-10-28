@@ -42,6 +42,10 @@ func (editorScreen *EditorScreen) DefaultStyle() tcell.Style {
 func (editorScreen *EditorScreen) DrawBufferRows(bufferRows [][]byte) {
 	for row, bufferRow := range bufferRows {
 		for col, char := range bufferRow {
+			// if col >= len(bufferRow) {
+			// 	break
+			// }
+
 			editorScreen.screen.SetContent(col, row, rune(char), nil, editorScreen.DefaultStyle())
 		}
 	}
