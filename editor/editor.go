@@ -16,8 +16,8 @@ type Screen = tcell.Screen
 type Editor struct {
 	screen     screen.EditorScreen
 	cursor     screen.Cursor
-	buffer     []byte
 	bufferRows [][]byte
+	fileName   string
 }
 
 func NewEditor() (*Editor, error) {
@@ -35,19 +35,32 @@ func NewEditor() (*Editor, error) {
 	editor := Editor{
 		screen: *editorScreen,
 		cursor: *editorCursor,
-		buffer: []byte{},
 	}
 
 	return &editor, nil
 }
 
 func (editor *Editor) ReadFileIntoBuffer(fileName string) {
-	editor.buffer = buffer.ReadFile(fileName)
-	editor.bufferRows = bytes.Split(editor.buffer, []byte{'\n'})
+	editor.fileName = fileName
+
+	buffer := buffer.ReadFile(fileName)
+	editor.bufferRows = bytes.Split(buffer, []byte{'\n'})
+}
+
+func (editor *Editor) WriteBufferToFile() {
+	buffer.WriteFile(editor.fileName, editor.GetBufferRows())
 }
 
 func (editor *Editor) GetBufferRows() [][]byte {
 	return editor.bufferRows
+}
+
+func (editor *Editor) GetCurrentRow() []byte {
+	return editor.GetBufferRows()[editor.cursor.Row]
+}
+
+func (editor *Editor) SetCurrentRow(row []byte) {
+	editor.GetBufferRows()[editor.cursor.Row] = row
 }
 
 func (editor *Editor) GetScreen() Screen {
@@ -55,7 +68,8 @@ func (editor *Editor) GetScreen() Screen {
 }
 
 func (editor *Editor) Render() {
-	editor.screen.DrawBufferRows(editor.bufferRows)
+	editor.screen.GetScreen().Clear()
+	editor.screen.DrawBufferRows(editor.GetBufferRows())
 	editor.GetScreen().Show()
 }
 
@@ -73,7 +87,7 @@ func (editor *Editor) HandleKeyEvents() {
 		if event.Key() == tcell.KeyRight {
 			c.Col++
 
-			if int(c.Col) > len(editor.GetBufferRows()[c.Row]) && int(c.Row) < len(editor.GetBufferRows()) {
+			if int(c.Col) > len(editor.GetCurrentRow()) && int(c.Row) < len(editor.GetBufferRows()) {
 				c.Row++
 				c.Col = 0
 			}
@@ -86,7 +100,7 @@ func (editor *Editor) HandleKeyEvents() {
 			if c.Col < 0 {
 				if c.Row > 0 {
 					c.Row--
-					c.Col = len(editor.GetBufferRows()[c.Row])
+					c.Col = len(editor.GetCurrentRow())
 				} else {
 					c.Col = 0
 				}
@@ -103,17 +117,17 @@ func (editor *Editor) HandleKeyEvents() {
 			break
 		}
 		if event.Key() == tcell.KeyEnter {
-			// bufferRows = slices.Insert(bufferRows, cursorRow, []byte{'p', 'l', 's'})
-			// cursorRow++
-			// cursorCol = 0
+			// editor.GetBufferRows() = slices.Insert(editor.GetBufferRows(), c.Row, []byte{})
+			// c.Row++
+			// c.Col = 0
 			break
 		}
 		if event.Key() == tcell.KeyTab {
-			editor.GetBufferRows()[c.Row] = slices.Insert(editor.GetBufferRows()[c.Row], int(c.Col), byte('\t'))
-			editor.GetBufferRows()[c.Row] = slices.Insert(editor.GetBufferRows()[c.Row], int(c.Col), byte('\t'))
-			editor.GetBufferRows()[c.Row] = slices.Insert(editor.GetBufferRows()[c.Row], int(c.Col), byte('\t'))
-			editor.GetBufferRows()[c.Row] = slices.Insert(editor.GetBufferRows()[c.Row], int(c.Col), byte('\t'))
-			c.Col += 4
+			// editor.SetCurrentRow(slices.Insert(editor.GetCurrentRow(), int(c.Col), byte('\t')))
+			// editor.SetCurrentRow(slices.Insert(editor.GetCurrentRow(), int(c.Col), byte('\t')))
+			// editor.SetCurrentRow(slices.Insert(editor.GetCurrentRow(), int(c.Col), byte('\t')))
+			// editor.SetCurrentRow(slices.Insert(editor.GetCurrentRow(), int(c.Col), byte('\t')))
+			// c.Col += 4
 			break
 		}
 		if event.Key() == tcell.KeyBackspace || event.Key() == tcell.KeyBackspace2 {
@@ -121,22 +135,25 @@ func (editor *Editor) HandleKeyEvents() {
 				break
 			}
 
-			row := editor.GetBufferRows()[c.Row]
-
-			if c.Col < len(row) {
-				editor.GetBufferRows()[c.Row] = slices.Delete(editor.GetBufferRows()[c.Row], c.Col, c.Col+1)
-
-				// editor.GetBufferRows()[c.Row] = []byte{}
-				// editor.GetBufferRows()[c.Row] = append(row[:c.Col], row[c.Col+1:]...)
+			if c.Col <= len(editor.GetCurrentRow())-1 {
+				editor.SetCurrentRow(slices.Delete(editor.GetCurrentRow(), c.Col-1, c.Col))
 			} else {
-				editor.GetBufferRows()[c.Row] = row[:c.Col]
+				editor.SetCurrentRow(editor.GetCurrentRow()[:c.Col-1])
 			}
+
+			c.Col--
 
 			break
 		}
 
+		if event.Key() == tcell.KeyCtrlS {
+			editor.WriteBufferToFile()
+			os.Exit(0)
+			break
+		}
+
 		char := event.Rune()
-		editor.GetBufferRows()[c.Row] = slices.Insert(editor.GetBufferRows()[c.Row], int(c.Col), byte(char))
+		editor.SetCurrentRow(slices.Insert(editor.GetCurrentRow(), int(c.Col), byte(char)))
 		c.Col++
 	}
 
@@ -153,8 +170,8 @@ func (editor *Editor) HandleKeyEvents() {
 		c.Col = 0
 	}
 
-	if int(c.Col) > len(editor.GetBufferRows()[c.Row]) {
-		c.Col = max(len(editor.GetBufferRows()[c.Row])-1, 0)
+	if int(c.Col) > len(editor.GetCurrentRow()) {
+		c.Col = max(len(editor.GetCurrentRow())-1, 0)
 	}
 }
 
