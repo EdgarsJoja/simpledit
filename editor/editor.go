@@ -116,11 +116,13 @@ func (editor *Editor) HandleKeyEvents() {
 			if c.Col == 0 {
 				editor.BufferRows = slices.Insert(editor.BufferRows, c.Row, []byte{})
 				c.Row++
+				break
 			}
 
 			if c.Col >= len(editor.GetCurrentRow())-1 {
 				editor.BufferRows = slices.Insert(editor.BufferRows, c.Row+1, []byte{})
 				c.Row++
+				break
 			}
 
 			c.Col = 0
