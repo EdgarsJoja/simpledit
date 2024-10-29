@@ -16,7 +16,7 @@ type Screen = tcell.Screen
 type Editor struct {
 	screen     screen.EditorScreen
 	cursor     screen.Cursor
-	bufferRows [][]byte
+	BufferRows [][]byte
 	fileName   string
 }
 
@@ -44,23 +44,19 @@ func (editor *Editor) ReadFileIntoBuffer(fileName string) {
 	editor.fileName = fileName
 
 	buffer := buffer.ReadFile(fileName)
-	editor.bufferRows = bytes.Split(buffer, []byte{'\n'})
+	editor.BufferRows = bytes.Split(buffer, []byte{'\n'})
 }
 
 func (editor *Editor) WriteBufferToFile() {
-	buffer.WriteFile(editor.fileName, editor.GetBufferRows())
-}
-
-func (editor *Editor) GetBufferRows() [][]byte {
-	return editor.bufferRows
+	buffer.WriteFile(editor.fileName, editor.BufferRows)
 }
 
 func (editor *Editor) GetCurrentRow() []byte {
-	return editor.GetBufferRows()[editor.cursor.Row]
+	return editor.BufferRows[editor.cursor.Row]
 }
 
 func (editor *Editor) SetCurrentRow(row []byte) {
-	editor.GetBufferRows()[editor.cursor.Row] = row
+	editor.BufferRows[editor.cursor.Row] = row
 }
 
 func (editor *Editor) GetScreen() Screen {
@@ -69,7 +65,7 @@ func (editor *Editor) GetScreen() Screen {
 
 func (editor *Editor) Render() {
 	editor.screen.GetScreen().Clear()
-	editor.screen.DrawBufferRows(editor.GetBufferRows())
+	editor.screen.DrawBufferRows(editor.BufferRows)
 	editor.GetScreen().Show()
 }
 
@@ -87,7 +83,7 @@ func (editor *Editor) HandleKeyEvents() {
 		if event.Key() == tcell.KeyRight {
 			c.Col++
 
-			if int(c.Col) > len(editor.GetCurrentRow()) && int(c.Row) < len(editor.GetBufferRows()) {
+			if int(c.Col) > len(editor.GetCurrentRow()) && int(c.Row) < len(editor.BufferRows) {
 				c.Row++
 				c.Col = 0
 			}
@@ -117,9 +113,17 @@ func (editor *Editor) HandleKeyEvents() {
 			break
 		}
 		if event.Key() == tcell.KeyEnter {
-			// editor.GetBufferRows() = slices.Insert(editor.GetBufferRows(), c.Row, []byte{})
-			// c.Row++
-			// c.Col = 0
+			if c.Col == 0 {
+				editor.BufferRows = slices.Insert(editor.BufferRows, c.Row, []byte{})
+				c.Row++
+			}
+
+			if c.Col >= len(editor.GetCurrentRow())-1 {
+				editor.BufferRows = slices.Insert(editor.BufferRows, c.Row+1, []byte{})
+				c.Row++
+			}
+
+			c.Col = 0
 			break
 		}
 		if event.Key() == tcell.KeyTab {
@@ -131,7 +135,16 @@ func (editor *Editor) HandleKeyEvents() {
 			break
 		}
 		if event.Key() == tcell.KeyBackspace || event.Key() == tcell.KeyBackspace2 {
-			if c.Col <= 0 {
+			if len(editor.GetCurrentRow()) == 0 {
+				editor.BufferRows = slices.Delete(editor.BufferRows, c.Row, c.Row+1)
+				c.Row--
+				c.Col = len(editor.GetCurrentRow())
+				break
+			}
+
+			if c.Col == 0 {
+				c.Row--
+				c.Col = len(editor.GetCurrentRow())
 				break
 			}
 
@@ -162,8 +175,8 @@ func (editor *Editor) HandleKeyEvents() {
 		c.Row = 0
 	}
 
-	if int(c.Row) >= len(editor.GetBufferRows()) {
-		c.Row = len(editor.GetBufferRows()) - 1
+	if int(c.Row) >= len(editor.BufferRows) {
+		c.Row = len(editor.BufferRows) - 1
 	}
 
 	if c.Col < 0 {
