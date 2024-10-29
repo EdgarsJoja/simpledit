@@ -9,6 +9,10 @@ import (
 func ReadFile(fileName string) []byte {
 	file, err := os.Open(fileName)
 
+	if os.IsNotExist(err) {
+		return []byte{}
+	}
+
 	if err != nil {
 		panic(err)
 	}
