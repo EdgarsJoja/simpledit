@@ -83,9 +83,8 @@ func (editor *Editor) HandleKeyEvents() {
 		if event.Key() == tcell.KeyRight {
 			c.Col++
 
-			if int(c.Col) > len(editor.GetCurrentRow()) && int(c.Row) < len(editor.BufferRows) {
-				c.Row++
-				c.Col = 0
+			if int(c.Col) > len(editor.GetCurrentRow()) && int(c.Row) < len(editor.BufferRows)-1 {
+				editor.CursorGoToStartOfNextRow()
 			}
 
 			break
@@ -95,8 +94,7 @@ func (editor *Editor) HandleKeyEvents() {
 
 			if c.Col < 0 {
 				if c.Row > 0 {
-					c.Row--
-					c.Col = len(editor.GetCurrentRow())
+					editor.CursorGoToEndOfPreviousRow()
 				} else {
 					c.Col = 0
 				}
@@ -113,18 +111,26 @@ func (editor *Editor) HandleKeyEvents() {
 			break
 		}
 		if event.Key() == tcell.KeyEnter {
+			// Insert new line above current line
 			if c.Col == 0 {
 				editor.BufferRows = slices.Insert(editor.BufferRows, c.Row, []byte{})
 				c.Row++
 				break
 			}
 
+			// Insert new line below current line
 			if c.Col >= len(editor.GetCurrentRow())-1 {
 				editor.BufferRows = slices.Insert(editor.BufferRows, c.Row+1, []byte{})
 				c.Row++
 				break
 			}
 
+			// Split current row
+			row := editor.GetCurrentRow()
+			editor.SetCurrentRow(row[:c.Col])
+			editor.BufferRows = slices.Insert(editor.BufferRows, c.Row+1, row[c.Col:])
+
+			c.Row++
 			c.Col = 0
 			break
 		}
@@ -137,19 +143,20 @@ func (editor *Editor) HandleKeyEvents() {
 			break
 		}
 		if event.Key() == tcell.KeyBackspace || event.Key() == tcell.KeyBackspace2 {
+			// Remove current row, if it was empty
 			if len(editor.GetCurrentRow()) == 0 {
 				editor.BufferRows = slices.Delete(editor.BufferRows, c.Row, c.Row+1)
-				c.Row--
-				c.Col = len(editor.GetCurrentRow())
+				editor.CursorGoToEndOfPreviousRow()
 				break
 			}
 
+			// Go to the end of previous row
 			if c.Col == 0 {
-				c.Row--
-				c.Col = len(editor.GetCurrentRow())
+				editor.CursorGoToEndOfPreviousRow()
 				break
 			}
 
+			// Delete character
 			if c.Col <= len(editor.GetCurrentRow())-1 {
 				editor.SetCurrentRow(slices.Delete(editor.GetCurrentRow(), c.Col-1, c.Col))
 			} else {
@@ -186,10 +193,20 @@ func (editor *Editor) HandleKeyEvents() {
 	}
 
 	if int(c.Col) > len(editor.GetCurrentRow()) {
-		c.Col = max(len(editor.GetCurrentRow())-1, 0)
+		c.Col = max(len(editor.GetCurrentRow()), 0)
 	}
 }
 
 func (editor *Editor) ShowCursor() {
 	editor.GetScreen().ShowCursor(int(editor.cursor.Col), int(editor.cursor.Row))
+}
+
+func (editor *Editor) CursorGoToEndOfPreviousRow() {
+	editor.cursor.Row--
+	editor.cursor.Col = len(editor.GetCurrentRow())
+}
+
+func (editor *Editor) CursorGoToStartOfNextRow() {
+	editor.cursor.Row++
+	editor.cursor.Col = 0
 }
