@@ -143,6 +143,10 @@ func (editor *Editor) HandleKeyEvents() {
 			break
 		}
 		if event.Key() == tcell.KeyBackspace || event.Key() == tcell.KeyBackspace2 {
+			if c.Col == 0 && c.Row <= 0 {
+				break
+			}
+
 			// Remove current row, if it was empty
 			if len(editor.GetCurrentRow()) == 0 {
 				editor.BufferRows = slices.Delete(editor.BufferRows, c.Row, c.Row+1)
@@ -152,7 +156,10 @@ func (editor *Editor) HandleKeyEvents() {
 
 			// Go to the end of previous row
 			if c.Col == 0 {
+				row := editor.GetCurrentRow()
+				editor.BufferRows = slices.Delete(editor.BufferRows, c.Row, c.Row+1)
 				editor.CursorGoToEndOfPreviousRow()
+				editor.SetCurrentRow(append(editor.GetCurrentRow(), row...))
 				break
 			}
 
