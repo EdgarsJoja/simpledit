@@ -8,6 +8,8 @@ type EditorScreen struct {
 	screen   tcell.Screen
 	StartRow int
 	EndRow   int
+	StartCol int
+	EndCol   int
 }
 
 func InitEditorScreen() (*EditorScreen, error) {
@@ -57,4 +59,14 @@ func (editorScreen *EditorScreen) MoveScreenDown() {
 func (editorScreen *EditorScreen) MoveScreenUp() {
 	editorScreen.StartRow--
 	editorScreen.EndRow--
+}
+
+func (editorScreen *EditorScreen) MoveScreenLeft() {
+	editorScreen.StartCol--
+	editorScreen.EndCol--
+}
+
+func (editorScreen *EditorScreen) MoveScreenRight() {
+	editorScreen.StartCol++
+	editorScreen.EndCol++
 }

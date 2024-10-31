@@ -37,9 +37,12 @@ func NewEditor() (*Editor, error) {
 		cursor: *editorCursor,
 	}
 
-	_, height := editor.GetScreen().Size()
-	editor.screen.StartRow = 0
+	width, height := editor.GetScreen().Size()
+	editor.screen.StartRow = editor.cursor.Row
 	editor.screen.EndRow = height
+
+	editor.screen.StartCol = editor.cursor.Col
+	editor.screen.EndCol = width
 
 	return &editor, nil
 }
@@ -70,8 +73,14 @@ func (editor *Editor) GetScreen() Screen {
 func (editor *Editor) Render() {
 	editor.GetScreen().Clear()
 
-	lowerBound, upperBound := max(editor.screen.StartRow, 0), min(editor.screen.EndRow, len(editor.BufferRows))
-	bufferRows := editor.BufferRows[lowerBound:upperBound]
+	rowLowerBound, rowUpperBound := max(editor.screen.StartRow, 0), min(editor.screen.EndRow, len(editor.BufferRows))
+	bufferRows := editor.BufferRows[rowLowerBound:rowUpperBound]
+
+	colLowerBound := max(editor.screen.StartCol, 0)
+	for i, row := range bufferRows {
+		colUpperBound := min(editor.screen.EndCol, max(len(row), 0))
+		bufferRows[i] = bufferRows[i][colLowerBound:colUpperBound]
+	}
 
 	editor.screen.DrawBufferRows(bufferRows)
 	editor.GetScreen().Show()
@@ -193,9 +202,9 @@ func (editor *Editor) HandleEvents() {
 		editor.SetCurrentRow(slices.Insert(editor.GetCurrentRow(), int(c.Col), byte(char)))
 		c.Col++
 	case *tcell.EventResize:
-		_, h := event.Size()
+		_, height := event.Size()
 		editor.screen.StartRow = 0
-		editor.screen.EndRow = h
+		editor.screen.EndRow = height
 		c.Row = editor.screen.StartRow
 	}
 
@@ -216,6 +225,7 @@ func (editor *Editor) HandleEvents() {
 		c.Col = max(len(editor.GetCurrentRow()), 0)
 	}
 
+	// Adjust viewport
 	if c.Row < editor.screen.StartRow {
 		editor.screen.MoveScreenUp()
 	}
@@ -223,10 +233,19 @@ func (editor *Editor) HandleEvents() {
 	if c.Row > editor.screen.EndRow-1 {
 		editor.screen.MoveScreenDown()
 	}
+
+	if c.Col < editor.screen.StartCol {
+		editor.screen.MoveScreenLeft()
+	}
+
+	if c.Col > editor.screen.EndCol-1 {
+		// fmt.Println(c.Col, editor.screen.EndCol)
+		editor.screen.MoveScreenRight()
+	}
 }
 
 func (editor *Editor) ShowCursor() {
-	editor.GetScreen().ShowCursor(editor.cursor.Col, editor.cursor.Row-editor.screen.StartRow)
+	editor.GetScreen().ShowCursor(editor.cursor.Col-editor.screen.StartCol, editor.cursor.Row-editor.screen.StartRow)
 }
 
 func (editor *Editor) CursorGoToEndOfPreviousRow() {

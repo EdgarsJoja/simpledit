@@ -1,5 +1,7 @@
 This is a test file
 
+editor.GetScreen().ShowCursor(editor.cursor.Col, editor.cursor.Row-editor.screen.StartRow) 	editor.GetScreen().ShowCursor(editor.cursor.Col, editor.cursor.Row-editor.screen.StartRow)
+	editor.GetScreen().ShowCursor(editor.cursor.Col, editor.cursor.Row-editor.screen.StartRow)
 
 
 Second line
