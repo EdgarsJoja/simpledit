@@ -23,7 +23,7 @@ func main() {
 
 	for {
 		editor.Render()
-		editor.HandleKeyEvents()
+		editor.HandleEvents()
 		editor.ShowCursor()
 	}
 }

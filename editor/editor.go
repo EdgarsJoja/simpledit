@@ -77,7 +77,7 @@ func (editor *Editor) Render() {
 	editor.GetScreen().Show()
 }
 
-func (editor *Editor) HandleKeyEvents() {
+func (editor *Editor) HandleEvents() {
 	event := editor.GetScreen().PollEvent()
 	c := &editor.cursor
 
@@ -192,6 +192,11 @@ func (editor *Editor) HandleKeyEvents() {
 		char := event.Rune()
 		editor.SetCurrentRow(slices.Insert(editor.GetCurrentRow(), int(c.Col), byte(char)))
 		c.Col++
+	case *tcell.EventResize:
+		_, h := event.Size()
+		editor.screen.StartRow = 0
+		editor.screen.EndRow = h
+		c.Row = editor.screen.StartRow
 	}
 
 	// Safeguarding against overflow
