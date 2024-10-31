@@ -5,7 +5,9 @@ import (
 )
 
 type EditorScreen struct {
-	screen tcell.Screen
+	screen   tcell.Screen
+	StartRow int
+	EndRow   int
 }
 
 func InitEditorScreen() (*EditorScreen, error) {
@@ -45,4 +47,14 @@ func (editorScreen *EditorScreen) DrawBufferRows(bufferRows [][]byte) {
 			editorScreen.screen.SetContent(col, row, rune(char), nil, editorScreen.DefaultStyle())
 		}
 	}
+}
+
+func (editorScreen *EditorScreen) MoveScreenDown() {
+	editorScreen.StartRow++
+	editorScreen.EndRow++
+}
+
+func (editorScreen *EditorScreen) MoveScreenUp() {
+	editorScreen.StartRow--
+	editorScreen.EndRow--
 }

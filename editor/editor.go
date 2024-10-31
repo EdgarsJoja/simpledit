@@ -37,6 +37,10 @@ func NewEditor() (*Editor, error) {
 		cursor: *editorCursor,
 	}
 
+	_, height := editor.GetScreen().Size()
+	editor.screen.StartRow = 0
+	editor.screen.EndRow = height
+
 	return &editor, nil
 }
 
@@ -64,8 +68,12 @@ func (editor *Editor) GetScreen() Screen {
 }
 
 func (editor *Editor) Render() {
-	editor.screen.GetScreen().Clear()
-	editor.screen.DrawBufferRows(editor.BufferRows)
+	editor.GetScreen().Clear()
+
+	lowerBound, upperBound := max(editor.screen.StartRow, 0), min(editor.screen.EndRow, len(editor.BufferRows))
+	bufferRows := editor.BufferRows[lowerBound:upperBound]
+
+	editor.screen.DrawBufferRows(bufferRows)
 	editor.GetScreen().Show()
 }
 
@@ -191,7 +199,7 @@ func (editor *Editor) HandleKeyEvents() {
 		c.Row = 0
 	}
 
-	if int(c.Row) >= len(editor.BufferRows) {
+	if c.Row >= len(editor.BufferRows) {
 		c.Row = len(editor.BufferRows) - 1
 	}
 
@@ -199,13 +207,21 @@ func (editor *Editor) HandleKeyEvents() {
 		c.Col = 0
 	}
 
-	if int(c.Col) > len(editor.GetCurrentRow()) {
+	if c.Col > len(editor.GetCurrentRow()) {
 		c.Col = max(len(editor.GetCurrentRow()), 0)
+	}
+
+	if c.Row < editor.screen.StartRow {
+		editor.screen.MoveScreenUp()
+	}
+
+	if c.Row > editor.screen.EndRow-1 {
+		editor.screen.MoveScreenDown()
 	}
 }
 
 func (editor *Editor) ShowCursor() {
-	editor.GetScreen().ShowCursor(int(editor.cursor.Col), int(editor.cursor.Row))
+	editor.GetScreen().ShowCursor(editor.cursor.Col, editor.cursor.Row-editor.screen.StartRow)
 }
 
 func (editor *Editor) CursorGoToEndOfPreviousRow() {
