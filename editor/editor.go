@@ -41,8 +41,11 @@ func NewEditor() (*Editor, error) {
 	editor.screen.StartRow = editor.cursor.Row
 	editor.screen.EndRow = height
 
-	editor.screen.StartCol = editor.cursor.Col
-	editor.screen.EndCol = width
+	// editor.screen.StartCol = editor.cursor.Col
+	// editor.screen.EndCol = width
+	editor.screen.StartCol = max(editor.cursor.Col-editor.screen.ScreenWidth/2, 0)
+	editor.screen.EndCol = editor.screen.StartCol + width
+	editor.screen.ScreenWidth = width
 
 	return &editor, nil
 }
@@ -73,11 +76,13 @@ func (editor *Editor) GetScreen() Screen {
 func (editor *Editor) Render() {
 	editor.GetScreen().Clear()
 
-	rowLowerBound, rowUpperBound := max(editor.screen.StartRow, 0), min(editor.screen.EndRow, len(editor.BufferRows))
-	bufferRows := editor.BufferRows[rowLowerBound:rowUpperBound]
+	bufferRows := make([][]byte, len(editor.BufferRows))
 
-	colLowerBound := max(editor.screen.StartCol, 0)
+	rowLowerBound, rowUpperBound := max(editor.screen.StartRow, 0), min(editor.screen.EndRow, len(editor.BufferRows))
+	_ = copy(bufferRows, editor.BufferRows[rowLowerBound:rowUpperBound])
+
 	for i, row := range bufferRows {
+		colLowerBound := max(min(editor.screen.StartCol, len(row)), 0)
 		colUpperBound := min(editor.screen.EndCol, max(len(row), 0))
 		bufferRows[i] = bufferRows[i][colLowerBound:colUpperBound]
 	}
@@ -238,8 +243,7 @@ func (editor *Editor) HandleEvents() {
 		editor.screen.MoveScreenLeft()
 	}
 
-	if c.Col > editor.screen.EndCol-1 {
-		// fmt.Println(c.Col, editor.screen.EndCol)
+	if c.Col >= editor.screen.EndCol {
 		editor.screen.MoveScreenRight()
 	}
 }
@@ -251,9 +255,15 @@ func (editor *Editor) ShowCursor() {
 func (editor *Editor) CursorGoToEndOfPreviousRow() {
 	editor.cursor.Row--
 	editor.cursor.Col = len(editor.GetCurrentRow())
+
+	// editor.screen.EndCol = editor.cursor.Col
+	editor.screen.StartCol = editor.cursor.Col - editor.screen.ScreenWidth
 }
 
 func (editor *Editor) CursorGoToStartOfNextRow() {
 	editor.cursor.Row++
 	editor.cursor.Col = 0
+
+	editor.screen.StartCol = editor.cursor.Col
+	// editor.screen.EndCol = editor.screen.StartCol + editor.screen.ScreenWidth
 }

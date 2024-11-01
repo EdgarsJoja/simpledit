@@ -5,11 +5,12 @@ import (
 )
 
 type EditorScreen struct {
-	screen   tcell.Screen
-	StartRow int
-	EndRow   int
-	StartCol int
-	EndCol   int
+	screen      tcell.Screen
+	StartRow    int
+	EndRow      int
+	StartCol    int
+	EndCol      int
+	ScreenWidth int
 }
 
 func InitEditorScreen() (*EditorScreen, error) {
