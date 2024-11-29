@@ -7,6 +7,7 @@ import (
 	"simpledit/buffer"
 	"simpledit/screen"
 	"slices"
+	"strconv"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -88,6 +89,10 @@ func (editor *Editor) Render() {
 	}
 
 	editor.screen.DrawBufferRows(bufferRows)
+
+	colRow := strconv.Itoa(editor.cursor.Row) + ":" + strconv.Itoa(editor.cursor.Col)
+	editor.screen.DrawText(0, editor.screen.EndRow-1, colRow)
+
 	editor.GetScreen().Show()
 }
 

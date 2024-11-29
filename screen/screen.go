@@ -44,10 +44,23 @@ func (editorScreen *EditorScreen) DefaultStyle() tcell.Style {
 	return tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorReset)
 }
 
+func (editorScreen *EditorScreen) DrawRune(col int, row int, value rune) {
+	editorScreen.screen.SetContent(col, row, value, nil, editorScreen.DefaultStyle())
+}
+
+func (editorScreen *EditorScreen) DrawText(col int, row int, value string) {
+	x := col
+
+	for _, r := range value {
+		editorScreen.DrawRune(x, row, r)
+		x++
+	}
+}
+
 func (editorScreen *EditorScreen) DrawBufferRows(bufferRows [][]byte) {
 	for row, bufferRow := range bufferRows {
 		for col, char := range bufferRow {
-			editorScreen.screen.SetContent(col, row, rune(char), nil, editorScreen.DefaultStyle())
+			editorScreen.DrawRune(col, row, rune(char))
 		}
 	}
 }
