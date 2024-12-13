@@ -38,12 +38,33 @@ func NewEditor() (*Editor, error) {
 		cursor: *editorCursor,
 	}
 
+	editor.cursor.SetUpdatedCallback(func(cursor *screen.Cursor) {
+		if cursor.Col < editor.screen.StartCol {
+			editor.screen.EndCol = editor.cursor.Col + editor.screen.ScreenWidth + 1
+			editor.screen.StartCol = max(editor.screen.EndCol-editor.screen.ScreenWidth-1, 0)
+		}
+
+		if cursor.Col >= editor.screen.EndCol {
+			editor.screen.StartCol = max(editor.cursor.Col-editor.screen.ScreenWidth+1, 0)
+			editor.screen.EndCol = editor.screen.StartCol + editor.screen.ScreenWidth
+		}
+
+		if cursor.Row < editor.screen.StartRow {
+			editor.screen.EndRow = editor.cursor.Row + editor.screen.ScreenHeight + 1
+			editor.screen.StartRow = max(editor.screen.EndRow-editor.screen.ScreenHeight-1, 0)
+		}
+
+		if cursor.Row >= editor.screen.EndRow {
+			editor.screen.StartRow = max(editor.cursor.Row-editor.screen.ScreenHeight+1, 0)
+			editor.screen.EndRow = editor.screen.StartRow + editor.screen.ScreenHeight
+		}
+	})
+
 	width, height := editor.GetScreen().Size()
 	editor.screen.StartRow = editor.cursor.Row
 	editor.screen.EndRow = height
+	editor.screen.ScreenHeight = height
 
-	// editor.screen.StartCol = editor.cursor.Col
-	// editor.screen.EndCol = width
 	editor.screen.StartCol = max(editor.cursor.Col-editor.screen.ScreenWidth/2, 0)
 	editor.screen.EndCol = editor.screen.StartCol + width
 	editor.screen.ScreenWidth = width
@@ -108,7 +129,7 @@ func (editor *Editor) HandleEvents() {
 			return
 		}
 		if event.Key() == tcell.KeyRight {
-			c.Col++
+			c.SetCol(c.Col + 1)
 
 			if int(c.Col) > len(editor.GetCurrentRow()) && int(c.Row) < len(editor.BufferRows)-1 {
 				editor.CursorGoToStartOfNextRow()
@@ -117,38 +138,38 @@ func (editor *Editor) HandleEvents() {
 			break
 		}
 		if event.Key() == tcell.KeyLeft {
-			c.Col--
+			c.SetCol(c.Col - 1)
 
 			if c.Col < 0 {
 				if c.Row > 0 {
 					editor.CursorGoToEndOfPreviousRow()
 				} else {
-					c.Col = 0
+					c.SetCol(0)
 				}
 			}
 
 			break
 		}
 		if event.Key() == tcell.KeyUp {
-			c.Row--
+			c.SetRow(c.Row - 1)
 			break
 		}
 		if event.Key() == tcell.KeyDown {
-			c.Row++
+			c.SetRow(c.Row + 1)
 			break
 		}
 		if event.Key() == tcell.KeyEnter {
 			// Insert new line above current line
 			if c.Col == 0 {
 				editor.BufferRows = slices.Insert(editor.BufferRows, c.Row, []byte{})
-				c.Row++
+				c.SetRow(c.Row + 1)
 				break
 			}
 
 			// Insert new line below current line
 			if c.Col >= len(editor.GetCurrentRow())-1 {
 				editor.BufferRows = slices.Insert(editor.BufferRows, c.Row+1, []byte{})
-				c.Row++
+				c.SetRow(c.Row + 1)
 				break
 			}
 
@@ -157,8 +178,8 @@ func (editor *Editor) HandleEvents() {
 			editor.SetCurrentRow(row[:c.Col])
 			editor.BufferRows = slices.Insert(editor.BufferRows, c.Row+1, row[c.Col:])
 
-			c.Row++
-			c.Col = 0
+			c.SetRow(c.Row + 1)
+			c.SetCol(0)
 			break
 		}
 		if event.Key() == tcell.KeyTab {
@@ -197,7 +218,7 @@ func (editor *Editor) HandleEvents() {
 				editor.SetCurrentRow(editor.GetCurrentRow()[:c.Col-1])
 			}
 
-			c.Col--
+			c.SetCol(c.Col - 1)
 
 			break
 		}
@@ -210,46 +231,30 @@ func (editor *Editor) HandleEvents() {
 
 		char := event.Rune()
 		editor.SetCurrentRow(slices.Insert(editor.GetCurrentRow(), int(c.Col), byte(char)))
-		c.Col++
+		c.SetCol(c.Col + 1)
 	case *tcell.EventResize:
 		_, height := event.Size()
 		editor.screen.StartRow = 0
 		editor.screen.EndRow = height
-		c.Row = editor.screen.StartRow
+
+		c.SetRow(editor.screen.StartRow)
 	}
 
 	// Safeguarding against overflow
 	if c.Row < 0 {
-		c.Row = 0
+		c.SetRow(0)
 	}
 
 	if c.Row >= len(editor.BufferRows) {
-		c.Row = len(editor.BufferRows) - 1
+		c.SetRow(len(editor.BufferRows) - 1)
 	}
 
 	if c.Col < 0 {
-		c.Col = 0
+		c.SetCol(0)
 	}
 
 	if c.Col > len(editor.GetCurrentRow()) {
-		c.Col = max(len(editor.GetCurrentRow()), 0)
-	}
-
-	// Adjust viewport
-	if c.Row < editor.screen.StartRow {
-		editor.screen.MoveScreenUp()
-	}
-
-	if c.Row > editor.screen.EndRow-1 {
-		editor.screen.MoveScreenDown()
-	}
-
-	if c.Col < editor.screen.StartCol {
-		editor.screen.MoveScreenLeft()
-	}
-
-	if c.Col >= editor.screen.EndCol {
-		editor.screen.MoveScreenRight()
+		c.SetCol(max(len(editor.GetCurrentRow()), 0))
 	}
 }
 
@@ -258,17 +263,11 @@ func (editor *Editor) ShowCursor() {
 }
 
 func (editor *Editor) CursorGoToEndOfPreviousRow() {
-	editor.cursor.Row--
-	editor.cursor.Col = len(editor.GetCurrentRow())
-
-	// editor.screen.EndCol = editor.cursor.Col
-	editor.screen.StartCol = editor.cursor.Col - editor.screen.ScreenWidth
+	editor.cursor.SetRow(editor.cursor.Row - 1)
+	editor.cursor.SetCol(len(editor.GetCurrentRow()))
 }
 
 func (editor *Editor) CursorGoToStartOfNextRow() {
-	editor.cursor.Row++
-	editor.cursor.Col = 0
-
-	editor.screen.StartCol = editor.cursor.Col
-	// editor.screen.EndCol = editor.screen.StartCol + editor.screen.ScreenWidth
+	editor.cursor.SetRow(editor.cursor.Row + 1)
+	editor.cursor.SetCol(0)
 }
