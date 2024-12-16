@@ -135,6 +135,8 @@ func (editor *Editor) HandleEvents() {
 				editor.CursorGoToStartOfNextRow()
 			}
 
+			c.TargetCol = c.Col
+
 			break
 		}
 		if event.Key() == tcell.KeyLeft {
@@ -148,14 +150,18 @@ func (editor *Editor) HandleEvents() {
 				}
 			}
 
+			c.TargetCol = c.Col
+
 			break
 		}
 		if event.Key() == tcell.KeyUp {
 			c.SetRow(c.Row - 1)
+			c.SetCol(c.TargetCol)
 			break
 		}
 		if event.Key() == tcell.KeyDown {
 			c.SetRow(c.Row + 1)
+			c.SetCol(c.TargetCol)
 			break
 		}
 		if event.Key() == tcell.KeyEnter {
@@ -232,6 +238,7 @@ func (editor *Editor) HandleEvents() {
 		char := event.Rune()
 		editor.SetCurrentRow(slices.Insert(editor.GetCurrentRow(), int(c.Col), byte(char)))
 		c.SetCol(c.Col + 1)
+		c.TargetCol = c.Col
 	case *tcell.EventResize:
 		_, height := event.Size()
 		editor.screen.StartRow = 0

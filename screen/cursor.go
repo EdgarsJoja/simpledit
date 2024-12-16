@@ -3,6 +3,7 @@ package screen
 type Cursor struct {
 	Row             int
 	Col             int
+	TargetCol       int
 	updatedCallback func(cursor *Cursor)
 }
 
