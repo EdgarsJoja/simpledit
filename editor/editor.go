@@ -184,7 +184,7 @@ func (editor *Editor) HandleEvents() {
 			}
 
 			// Insert new line below current line
-			if c.Col >= len(editor.GetCurrentRow())-1 {
+			if c.Col >= len(editor.GetCurrentRow()) {
 				editor.BufferRows = slices.Insert(editor.BufferRows, c.Row+1, []byte{})
 				c.SetRow(c.Row + 1)
 				break
