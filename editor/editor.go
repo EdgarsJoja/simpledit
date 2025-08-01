@@ -8,6 +8,7 @@ import (
 	"simpledit/screen"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -61,12 +62,7 @@ func NewEditor() (*Editor, error) {
 	})
 
 	width, height := editor.GetScreen().Size()
-	editor.screen.StartRow = editor.cursor.Row
-	editor.screen.EndRow = height
 	editor.screen.ScreenHeight = height
-
-	editor.screen.StartCol = max(editor.cursor.Col-editor.screen.ScreenWidth/2, 0)
-	editor.screen.EndCol = editor.screen.StartCol + width
 	editor.screen.ScreenWidth = width
 
 	return &editor, nil
@@ -120,9 +116,24 @@ func (editor *Editor) Render() {
 func (editor *Editor) HandleEvents() {
 	event := editor.GetScreen().PollEvent()
 	c := &editor.cursor
+	s := &editor.screen
 
 	switch event := event.(type) {
 	case *tcell.EventKey:
+		shift := strings.Contains(event.Name(), "Shift")
+		if shift {
+			cursorCoordinates := screen.Coordinates{Row: c.Row, Col: c.Col}
+
+			if s.HighlightStart == nil || s.HighlightEnd == nil {
+				s.HighlightStart = &cursorCoordinates
+				s.HighlightEnd = &cursorCoordinates
+			} else {
+				s.HighlightEnd = &cursorCoordinates
+			}
+		} else {
+			s.HighlightStart = nil
+			s.HighlightEnd = nil
+		}
 		if event.Key() == tcell.KeyEscape {
 			os.Exit(0)
 
