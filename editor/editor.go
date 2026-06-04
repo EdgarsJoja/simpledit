@@ -16,10 +16,11 @@ import (
 type Screen = tcell.Screen
 
 type Editor struct {
-	screen     screen.EditorScreen
-	cursor     screen.Cursor
-	BufferRows [][]byte
-	fileName   string
+	screen              screen.EditorScreen
+	cursor              screen.Cursor
+	BufferRows          [][]byte
+	ClipboardBufferRows [][]byte
+	fileName            string
 }
 
 func NewEditor() (*Editor, error) {
@@ -133,6 +134,8 @@ func (editor *Editor) HandleEvents() {
 		} else {
 			s.HighlightStart = nil
 			s.HighlightEnd = nil
+		}
+		if event.Key() == tcell.KeyCtrlC {
 		}
 		if event.Key() == tcell.KeyEscape {
 			os.Exit(0)
